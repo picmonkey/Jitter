@@ -135,9 +135,16 @@ compileScript= (source, target, options) ->
     code= fs.readFileSync(source).toString()
     try
       currentJS = fs.readFileSync(targetPath).toString()
-    js= CoffeeScript.compile code, {source, bare: options?.bare, sourceMap: options?.sourceMap}
+    js= CoffeeScript.compile code, {source, header: true, bare: options?.bare, sourceMap: options?.sourceMap, filename: source}
+    if options?.sourceMap and typeof(js) == 'object'
+        sourceMap = JSON.parse(js.v3SourceMap)
+        sourceMap.file = path.basename(source, '.coffee') + '.js'
+        sourceMap.sources = [path.basename(source)]
+        mapName = sourceMap.file + '.map'
+        sourceMap = JSON.stringify(sourceMap)
+        js = js.js + "\n//@ sourceMappingURL=#{mapName}"
     return if js is currentJS
-    writeJS js, targetPath
+    writeJS js, sourceMap, targetPath
     if currentJS?
       puts 'Recompiled '+ source
     else
@@ -152,9 +159,11 @@ jsPath= (source, target) ->
   dir=      target + path.dirname(source).substring(base.length)
   path.join dir, filename
 
-writeJS= (js, targetPath) ->
+writeJS= (js, sourceMap, targetPath) ->
   q exec, "mkdir -p #{path.dirname targetPath}", ->
     fs.writeFileSync targetPath, js
+    if sourceMap
+        fs.writeFileSync targetPath + ".map", sourceMap
     if baseTest and isSubpath(baseTest, targetPath) and (targetPath not in testFiles)
       testFiles.push targetPath
 
