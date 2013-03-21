@@ -135,7 +135,7 @@ compileScript= (source, target, options) ->
     code= fs.readFileSync(source).toString()
     try
       currentJS = fs.readFileSync(targetPath).toString()
-    js= CoffeeScript.compile code, {source, bare: options?.bare}
+    js= CoffeeScript.compile code, {source, bare: options?.bare, sourceMap: options?.sourceMap}
     return if js is currentJS
     writeJS js, targetPath
     if currentJS?
@@ -182,6 +182,7 @@ runTests= ->
 parseOptions= ->
   optionParser= new optparse.OptionParser [
       ['-b', '--bare', 'compile without the top-level function wrapper']
+      ['-m', '--sourceMap', 'compile with source maps (if supported)']
   ], BANNER
   options=    optionParser.parse process.argv
   [baseSource, baseTarget, baseTest]= (options.arguments[arg] or '' for arg in [2..4])
