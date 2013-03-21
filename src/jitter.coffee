@@ -137,12 +137,13 @@ compileScript= (source, target, options) ->
       currentJS = fs.readFileSync(targetPath).toString()
     js= CoffeeScript.compile code, {source, header: true, bare: options?.bare, sourceMap: options?.sourceMap, filename: source}
     if options?.sourceMap and typeof(js) == 'object'
+        # Inline the source map in the JS output
         sourceMap = JSON.parse(js.v3SourceMap)
         sourceMap.file = path.basename(source, '.coffee') + '.js'
-        sourceMap.sources = [path.basename(source)]
-        mapName = sourceMap.file + '.map'
+        sourceMap.sources = ["./" + path.basename(source)]
+        sourceMap.sourcesContent = [fs.readFileSync(source).toString()]
         sourceMap = JSON.stringify(sourceMap)
-        js = js.js + "\n//@ sourceMappingURL=#{mapName}"
+        js = js.js + "\n//@ sourceMappingURL=data:application/json;base64," + new Buffer(sourceMap).toString('base64')
     return if js is currentJS
     writeJS js, sourceMap, targetPath
     if currentJS?
