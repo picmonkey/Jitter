@@ -140,11 +140,12 @@ compileScript= (source, target, options) ->
         sourceMap = JSON.parse(js.v3SourceMap)
         sourceMap.file = path.basename(source, '.coffee') + '.js'
         sourceMap.sources = [path.basename(source)]
-        mapName = sourceMap.file + '.map'
+        mapUniqueId = new Date().getTime()
+        mapName = "#{sourceMap.file}.#{mapUniqueId}.map"
         sourceMap = JSON.stringify(sourceMap)
         js = js.js + "\n//@ sourceMappingURL=#{mapName}"
     return if js is currentJS
-    writeJS js, sourceMap, targetPath
+    writeJS js, sourceMap, targetPath, mapUniqueId
     if currentJS?
       puts 'Recompiled '+ source
     else
@@ -159,11 +160,14 @@ jsPath= (source, target) ->
   dir=      target + path.dirname(source).substring(base.length)
   path.join dir, filename
 
-writeJS= (js, sourceMap, targetPath) ->
+writeJS= (js, sourceMap, targetPath, mapUniqueId) ->
   q exec, "mkdir -p #{path.dirname targetPath}", ->
     fs.writeFileSync targetPath, js
     if sourceMap
-        fs.writeFileSync targetPath + ".map", sourceMap
+        # Remove any stale maps
+        for map in fs.readdirSync(path.dirname(targetPath))
+            fs.unlink(path.join(path.dirname(targetPath), map)) if map.match("#{path.basename(targetPath)}\.[0-9]*.map")
+        fs.writeFileSync "#{targetPath}.#{mapUniqueId}.map", sourceMap
     if baseTest and isSubpath(baseTest, targetPath) and (targetPath not in testFiles)
       testFiles.push targetPath
 
